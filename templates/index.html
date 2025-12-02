@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAGMonsters Wiki Copilot</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --chat-bg: #1e1e1e;
+            --user-msg-bg: #4a148c; /* Dark Purple */
+            --ai-msg-bg: #2c2c2c;
+            --accent-color: #bb86fc; /* Light Purple */
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background-color: #000000;
+            padding: 15px 20px;
+            border-bottom: 2px solid var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 10px rgba(187, 134, 252, 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Chat Area */
+        #chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background-color: var(--ai-msg-bg);
+            color: var(--text-color);
+            border-bottom-left-radius: 2px;
+            border: 1px solid #333;
+        }
+
+        /* Markdown Styles inside AI messages */
+        .ai-message strong { color: var(--accent-color); }
+        .ai-message h1, .ai-message h2, .ai-message h3 { 
+            margin-top: 10px; 
+            margin-bottom: 5px; 
+            font-size: 1.1em;
+            color: white;
+        }
+        .ai-message ul { padding-left: 20px; }
+
+        /* Sources tiny text */
+        .sources {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 8px;
+            text-align: right;
+            font-style: italic;
+        }
+
+        /* Input Area */
+        #input-area {
+            background-color: var(--chat-bg);
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #333;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 25px;
+            border: 2px solid #333;
+            background-color: var(--input-bg);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        /* Loading Indicator */
+        .typing-indicator {
+            display: none;
+            color: var(--accent-color);
+            font-size: 0.9rem;
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>👾 RAGMonsters Wiki Copilot</h1>
+    <span style="font-size: 0.8rem; color: #666;">Local Secure AI</span>
+</header>
+
+<div id="chat-container">
+    <!-- Welcome Message -->
+    <div class="message ai-message">
+        Hello! I have read your monster database. Ask me about <strong>Flameburst</strong>, <strong>Psyforge</strong>, or any other entity!
+    </div>
+</div>
+
+<div class="typing-indicator" id="typing-indicator">Summoning answer...</div>
+
+<div id="input-area">
+    <input type="text" id="user-input" placeholder="Ask about a monster..." autocomplete="off" onkeydown="if(event.key === 'Enter') sendMessage()">
+    <button onclick="sendMessage()" id="send-btn">SEND</button>
+</div>
+
+<script>
+    async function sendMessage() {
+        const inputField = document.getElementById('user-input');
+        const chatContainer = document.getElementById('chat-container');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const message = inputField.value.trim();
+
+        if (!message) return;
+
+        // 1. Add User Message
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user-message';
+        userDiv.textContent = message;
+        chatContainer.appendChild(userDiv);
+        
+        // Clear input & scroll
+        inputField.value = '';
+        inputField.disabled = true;
+        sendBtn.disabled = true;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        typingIndicator.style.display = 'block';
+
+        try {
+            // 2. Send to Flask Backend
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+
+            const data = await response.json();
+
+            // 3. Add AI Message
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'message ai-message';
+            
+            // Convert Markdown to HTML using the 'marked' library
+            aiDiv.innerHTML = marked.parse(data.response);
+
+            // Add Sources if available
+            if (data.context_used && data.context_used.length > 0) {
+                // Get unique filenames only
+                const uniqueSources = [...new Set(data.context_used.map(s => s.split('/').pop()))];
+                const sourceDiv = document.createElement('div');
+                sourceDiv.className = 'sources';
+                sourceDiv.textContent = 'Sources: ' + uniqueSources.join(', ');
+                aiDiv.appendChild(sourceDiv);
+            }
+
+            chatContainer.appendChild(aiDiv);
+
+        } catch (error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message ai-message';
+            errorDiv.style.color = '#ff6b6b';
+            errorDiv.textContent = "Error summoning response: " + error.message;
+            chatContainer.appendChild(errorDiv);
+        } finally {
+            inputField.disabled = false;
+            sendBtn.disabled = false;
+            inputField.focus();
+            typingIndicator.style.display = 'none';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    }
+</script>
+
+</body>
+</html>
