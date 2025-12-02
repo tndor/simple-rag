@@ -1,4 +1,5 @@
-langchain-community
+flask
+ollama
 langchain-chroma
 langchain-ollama
-ollama
+chromadb
