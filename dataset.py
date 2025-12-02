@@ -33,8 +33,8 @@ def create_vector_database():
 
     # Split documents into chunks
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Characters per chunk
-        chunk_overlap=500 # Overlap to maintain context between chunks
+        chunk_size=500,  # Characters per chunk
+        chunk_overlap=50 # Overlap to maintain context between chunks
     )
     chunks = text_splitter.split_documents(docs)
     print(f"Split into {len(chunks)} chunks.")
