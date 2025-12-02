@@ -1,22 +1,58 @@
 import ollama
 
-EMBEDDING_MODEL = 'hf.co/CompendiumLabs/bge-base-en-v1.5-gguf'
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-VECTOR_DB = []
+from langchain_ollama import OllamaEmbeddings
+from langchain_chroma import Chroma
 
-# Load dataset from a text file
-dataset = []
-with open("cat-facts.txt", "r") as file:
-    dataset = file.readlines()
-    print(f"Loaded {len(dataset)} entries.")
+EMBEDDING_MODEL = 'nomic-embed-text'
 
-# Function to add a chunk to the vector database
-def add_chunk_to_database(chunk):
-    embedding = ollama.embed(model=EMBEDDING_MODEL, input=chunk)['embeddings'][0]
-    VECTOR_DB.append((chunk, embedding))
+DIRECTORY_PATH = "./dataset"
+DB_PATH = "./vector_db"
 
-# Populate the vector database
-for i, chunk in enumerate(dataset):
-    add_chunk_to_database(chunk)
-    print(f"Added chunk {i+1}/{len(dataset)} to vector database.")
+def create_vector_database():
+    # Load documents from the specified directory
+    print("loading documents from directory...")
 
+    loader = DirectoryLoader(
+        DIRECTORY_PATH,
+        glob="**/*.md",
+        loader_cls=TextLoader
+    )
+    docs = loader.load()
+
+    if not docs:
+        print("No markdown files found.")
+        return
+
+    print(f"Loaded {len(docs)} documents.")
+
+    for doc in docs:
+        print(f"   Embedding file: {doc.metadata['source']}")
+
+    # Split documents into chunks
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,  # Characters per chunk
+        chunk_overlap=500 # Overlap to maintain context between chunks
+    )
+    chunks = text_splitter.split_documents(docs)
+    print(f"Split into {len(chunks)} chunks.")
+
+
+    # Create or load the vector database
+    print("Creating or loading vector database...")
+    embedding_model = OllamaEmbeddings(
+        model=EMBEDDING_MODEL
+    )
+
+    db = Chroma.from_documents(
+        documents=chunks,
+        embedding=embedding_model,
+        persist_directory=DB_PATH
+    )
+
+    print(f"Database created at {DB_PATH}.")
+
+if __name__ == "__main__":
+    create_vector_database()

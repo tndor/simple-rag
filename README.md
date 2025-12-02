@@ -1,63 +1,105 @@
-# Simple RAG Project
+# **Simple Local RAG (Retrieval-Augmented Generation)**
 
-This project is a minimal implementation of Retrieval-Augmented
-Generation (RAG), following the Hugging Face tutorial "Make Your Own
-RAG". It focuses on understanding the fundamentals of RAG rather than
-building a production system.
+This project implements a local RAG system using **Python**, **LangChain**, **ChromaDB**, and **Ollama**. It allows you to chat with your own Markdown notes without sending data to the cloud.
 
-## Project Purpose
+## **Features**
 
-The goal of this project is to understand the core mechanics behind RAG:
+* **Privacy-First**: Runs entirely locally using Ollama.  
+* **Vector Database**: Uses ChromaDB for persistent storage of embeddings.  
+* **Custom Knowledge**: Ingests .md files from a local directory.  
+* **Lightweight**: Optimized for local hardware using efficient embedding models (nomic-embed-text) and small LLMs (e.g., Llama 3.2 1B).
 
-1.  How raw text is converted into embeddings (numerical vectors).
-2.  How the system calculates similarity scores to retrieve the most
-    relevant chunks.
-3.  How the retrieved chunks are passed to an LLM to improve answers.
+## **Prerequisites**
 
-This project emphasizes these foundations rather than tooling,
-frameworks, or scaling.
+1. **Python 3.10+** installed.  
+2. [**Ollama**](https://ollama.com/) installed and running.
 
-## How RAG Works (In This Project)
+## **Setup & Installation**
 
-1.  Documents are split into chunks.
-2.  Each chunk is converted into a vector using an embedding model.
-3.  At query time:
-    -   The user question is embedded.
-    -   Cosine similarity is computed between the query vector and all
-        chunk vectors.
-    -   The top-k most similar chunks are selected.
-4.  These retrieved chunks are provided as context for the language
-    model to generate an answer.
+### **1\. Clone or Download the Project**
 
-Understanding embeddings and similarity calculations is the main purpose
-of this project.
+Ensure your project structure looks like this:
 
-## Setup
+    simple-rag/  
+    ├── dataset/           \# Put your .md files here  
+    │   ├── flameburst.md  
+    │   └── ...  
+    ├── dataset.py         \# Script to create the vector database  
+    ├── rag.py             \# Script to chat with your data  
+    ├── requirements.txt   \# Dependencies  
+    └── README.md
 
-Install dependencies:
+### **2\. Install Python Dependencies**
 
-    pip install ollama
+Create a virtual environment and install the required libraries:
 
-Pull models locally (example models used in the tutorial):
+#### Create virtual environment  
 
-    ollama pull hf.co/CompendiumLabs/bge-base-en-v1.5-gguf
+    python3 \-m venv .venv
+
+#### Activate it  
+
+    source .venv/bin/activate  \# On Windows: .venv\\Scripts\\activate
+
+#### Install libraries  
+
+    pip install langchain-community langchain-chroma langchain-ollama ollama
+
+### **3\. Pull Ollama Models**
+
+You need to download the specific models used in the code. Run these commands in your terminal:
+
+#### 1\. The Embedding Model (Critical for retrieval)  
+
+    ollama pull nomic-embed-text
+
+#### 2\. The Chat Model (The "Brain")  
+#### You can use llama3.2, llama3.1, or the 1B version for speed
+
     ollama pull hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF
 
-## Running the Project
+**Note:** If you change the model names in the code, ensure you ollama pull the matching name.
 
-Start the RAG chatbot:
+## **Usage**
+
+### **Step 1: Build the Database**
+
+Whenever you add new .md files to the dataset/ folder, you must rebuild the database.
+
+    python dataset.py
+
+*Expected Output:* Database created at ./vector\_db
+
+### **Step 2: Chat with Your Data**
+
+Run the retrieval script to ask questions.
 
     python rag.py
 
-## Key Learning Takeaways
+*Enter your query when prompted. The system will search your local notes and generate an answer based **only** on the context found.*
 
--   Embeddings represent text in a way that allows numerical comparison.
--   Similarity search (cosine similarity) determines which pieces of
-    text matter.
--   RAG improves accuracy by grounding responses in retrieved data.
--   The retrieval step is vector math; understanding it is essential
-    before using advanced libraries.
+## **Configuration**
+
+You can adjust these variables in dataset.py and rag.py to customize performance:
+
+* **EMBEDDING\_MODEL**: Defaults to 'nomic-embed-text'. Must match a model pulled in Ollama.  
+* **chunk\_size**: (In dataset.py) How large the text snippets are (default 500).  
+* **chunk\_overlap**: (In dataset.py) Overlap between snippets to preserve context (default 100).
+
+## **Troubleshooting**
+
+Q: The AI is hallucinating or not finding my new files.  
+A: This is usually a "Zombie Database" issue.
+
+1. Delete the ./vector\_db folder manually.  
+2. Run python dataset.py again to force a fresh rebuild.  
+3. Ensure your file extensions are lowercase .md (Linux is case-sensitive).
+
+Q: "Model not found" error.  
+A: Ensure the EMBEDDING\_MODEL string in your Python code exactly matches the output of ollama list in your terminal. Do not use HuggingFace URLs (e.g., hf.co/...) directly with Ollama.
 
 ## Reference
 
 Original tutorial: https://huggingface.co/blog/ngxson/make-your-own-rag
+
+Dataset: https://github.com/LostInBrittany/RAGmonsters
