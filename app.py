@@ -27,6 +27,67 @@ vector_db = Chroma(
 )
 print("Database connected.")
 
+def question_filtering(question):
+    FILTERING_PROMT = """You are a router. Return a JSON object with one key 'category'.
+    
+    Definitions:
+    - "SPECIFIC": Questions about one specific monster, or a specific attribute (biome, weight, weakness) of a single entity.
+    - "BROAD": Questions asking for lists, aggregations, summaries of multiple monsters, or general knowledge.
+
+    Examples:
+    User: "List all monsters in RAGMonsters."
+    Assistant: { "category": "BROAD" }
+
+    User: "What are the weaknesses of Flameburst?"
+    Assistant: { "category": "SPECIFIC" }
+
+    User: "In what biome do Flamebursts live?"
+    Assistant: { "category": "SPECIFIC" }
+
+    User: "Show me all rare monsters."
+    Assistant: { "category": "BROAD" }
+
+    User: "How heavy is a Psyforge?"
+    Assistant: { "category": "SPECIFIC" }
+    
+    Classify the following question:
+    """
+    
+    try:
+        # Temperature 0: Forces the model to pick the most likely token (deterministic)
+        response = ollama.chat(
+            model=CHAT_MODEL,
+            messages=[
+                {'role': 'system', 'content': FILTERING_PROMT},
+                {'role': 'user', 'content': question}
+            ],
+            format='json',
+            options={
+                "temperature": 0,
+                "seed": 42
+            }
+        )
+
+        import json
+        answer_json = json.loads(response['message']['content'])
+        category = answer_json.get('category', 'SPECIFIC').upper()
+        
+        if category not in ['SPECIFIC', 'BROAD']:
+            return 'SPECIFIC' # Fallback
+            
+        return category
+
+    except Exception as e:
+        print(f"Error during question filtering: {e}")
+        category = "SPECIFIC"
+
+    return category
+
+print(question_filtering("What are the main features of RAGMonsters?"))
+print(question_filtering("List all monsters in RAGMonsters."))
+print(question_filtering("In what biome do Flamebursts live?"))
+print(question_filtering("Tell me about RAGMonsters."))
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -38,7 +99,7 @@ def chat():
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
 
-    # Fetch top 3 relevant chunks
+    # Fetch top 6 relevant chunks
     results = vector_db.similarity_search_with_score(user_input, k=6)
     
     # Extract text from chunks
