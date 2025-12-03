@@ -3,6 +3,8 @@ RAGMonsters Wiki Copilot (Simple Local RAG)
 
 This project implements a local RAG system using **Python**, **Flask**, **LangChain**, **ChromaDB**, and **Ollama**. It allows you to chat with your own Markdown notes via a dark-themed web interface without sending data to the cloud.
 
+<img src="media/scr1.png" alt="App Screenshot" width="75%"/>
+
 Features
 --------
 
