@@ -10,133 +10,125 @@ Features
 
 -   **Web Interface**: A clean, dark-themed chat UI ("RAGMonsters Wiki Copilot").
 
--   **Vector Database**: Uses ChromaDB for persistent storage of embeddings.
+-   **Automated Setup**: Docker container handles model downloading and database building automatically.
 
 -   **Custom Knowledge**: Ingests `.md` files from a local directory.
 
 -   **Lightweight**: Optimized for local hardware using efficient embedding models (`nomic-embed-text`) and small LLMs (`Llama 3.2 1B`).
 
-Prerequisites
--------------
+Option 1: Docker (Recommended)
+------------------------------
+
+This method automates everything. You do not need to install Python or Ollama manually on your machine.
+
+### Prerequisites
+
+-   **Docker Desktop** (or Docker Engine) installed and running.
+
+### 1\. Run the Application
+
+Open your terminal in the project folder and run:
+
+```
+docker-compose up --build
+
+```
+
+**What happens next?**
+
+1.  The containers will start.
+
+2.  The system will automatically check if you have the required AI models. If not, it will download them (this may take a few minutes on the first run).
+
+3.  It will check for a vector database. If one doesn't exist, it will scan your `dataset/` folder and build it.
+
+4.  Once you see `Starting Flask App` in the logs, the app is ready.
+
+### 2\. Access the App
+
+Open your browser and go to: **`http://localhost:5000`**
+
+Option 2: Manual Python Setup
+-----------------------------
+
+Use this method if you want to modify the code or run without Docker.
+
+### Prerequisites
 
 1.  **Python 3.10+** installed.
 
 2.  [**Ollama**](https://ollama.com/ "null") installed and running.
 
-Setup & Installation
---------------------
-
-### 1\. Clone or Download the Project
-
-Ensure your project structure looks like this:
-
-```
-simple-rag/
-├── dataset/           # Put your .md files here
-│   ├── flameburst.md
-│   └── ...
-├── templates/         # HTML Frontend
-│   └── index.html
-├── app.py             # Flask Web Server
-├── dataset.py         # Script to create the vector database
-├── requirements.txt   # Dependencies
-└── README.md
-
-```
-
-### 2\. Install Python Dependencies
-
-Create a virtual environment and install the required libraries:
-
-#### Create virtual environment
+### 1\. Install Dependencies
 
 ```
 python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
 ```
 
-#### Activate it
+### 2\. Pull Ollama Models
 
-```
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-```
-
-#### Install libraries
-
-```
-pip install flask langchain-community langchain-chroma langchain-ollama ollama
-
-```
-
-### 3\. Pull Ollama Models
-
-You need to download the specific models used in the code. Run these commands in your terminal:
-
-#### 1\. The Embedding Model (Critical for retrieval)
+You must download the specific models used in the code manually:
 
 ```
 ollama pull nomic-embed-text
-
-```
-
-#### 2\. The Chat Model (The "Brain")
-
-```
 ollama pull hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF
 
 ```
 
-> **Note:** If you change the model names in `app.py` or `dataset.py`, ensure you `ollama pull` the matching name.
+### 3\. Build the Database
 
-Usage
------
-
-### Step 1: Build the Database
-
-Whenever you add new `.md` files to the `dataset/` folder, you must rebuild the database.
+Whenever you add new `.md` files to the `dataset/` folder, run:
 
 ```
 python dataset.py
 
 ```
 
-*Expected Output:* `Database created at ./vector_db`
-
-### Step 2: Run the App
-
-Start the Flask web server.
+### 4\. Run the Server
 
 ```
 python app.py
 
 ```
 
-Open your web browser and go to: **`http://localhost:5000`**
-
 Configuration
 -------------
 
-You can adjust these variables in `dataset.py` and `app.py` to customize performance:
+You can adjust these variables in `docker-compose.yml` (for Docker) or `app.py` (for manual run):
 
--   **`EMBEDDING_MODEL`**: Defaults to `'nomic-embed-text'`. Must match a model pulled in Ollama.
+-   **`EMBEDDING_MODEL`**: Defaults to `'nomic-embed-text'`.
 
--   **`chunk_size`**: (In `dataset.py`) How large the text snippets are (default `500`).
-
--   **`chunk_overlap`**: (In `dataset.py`) Overlap between snippets to preserve context (default `100`).
+-   **`chunk_size`**: How large the text snippets are (default `500`).
 
 Troubleshooting
 ---------------
 
-**Q: The AI is hallucinating or not finding my new files.** **A:** This is usually a "Zombie Database" issue.
+### Docker Issues
 
-1.  Delete the `./vector_db` folder manually.
+**Q: Error `bind: address already in use` (Port 11434)** **A:** This means Ollama is already running on your computer and conflictng with the Docker version.
 
-2.  Run `python dataset.py` again to force a fresh rebuild.
+-   **Fix:** Stop your local Ollama application (Quit from system tray or run `sudo service ollama stop` on Linux) and try `docker-compose up` again.
 
-3.  Ensure your file extensions are lowercase `.md` (Linux is case-sensitive).
+**Q: How do I rebuild the database in Docker?** **A:** If you added new notes and want to refresh the Docker database:
 
-**Q: "Model not found" error.** **A:** Ensure the `EMBEDDING_MODEL` string in your Python code exactly matches the output of `ollama list` in your terminal. Do not use HuggingFace URLs (e.g., `hf.co/...`) directly with Ollama unless you have pulled them using that exact tag.
+```
+docker-compose down -v   # The -v flag deletes the database volume
+docker-compose up        # Rebuilds the DB on startup
+
+```
+
+### General Issues
+
+**Q: The AI is hallucinating / not finding facts.** **A:** Ensure your database is up to date.
+
+-   **Docker:** See the rebuild instruction above.
+
+-   **Manual:** Delete the `./vector_db` folder and run `python dataset.py`.
+
+**Q: "Model not found" error.** **A:** Ensure the model name in your code/env matches the specific tag pulled in Ollama.
 
 Reference
 ---------
