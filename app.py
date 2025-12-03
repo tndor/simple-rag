@@ -83,11 +83,6 @@ def question_filtering(question):
 
     return category
 
-print(question_filtering("What are the main features of RAGMonsters?"))
-print(question_filtering("List all monsters in RAGMonsters."))
-print(question_filtering("In what biome do Flamebursts live?"))
-print(question_filtering("Tell me about RAGMonsters."))
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -99,8 +94,14 @@ def chat():
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
 
-    # Fetch top 6 relevant chunks
-    results = vector_db.similarity_search_with_score(user_input, k=6)
+    # Retrieve Relevant Context
+    filtering_category = question_filtering(user_input)
+    print(f"Question categorized as: {filtering_category}")
+
+    if filtering_category == "BROAD":
+        results = vector_db.similarity_search_with_score(user_input, k=20)
+    elif filtering_category == "SPECIFIC":
+        results = vector_db.similarity_search_with_score(user_input, k=3)
     
     # Extract text from chunks
     context_text = "\n\n".join([doc.page_content for doc, _score in results])
