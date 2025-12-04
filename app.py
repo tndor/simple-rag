@@ -106,10 +106,13 @@ def chat():
     # Extract text from chunks
     context_text = "\n\n".join([doc.page_content for doc, _score in results])
 
-    # 2. Augment Prompt
+    # Debug Context
+    print(f"Context Retrieved:\n{context_text}\n--- End of Context ---\n")
+
+    # Augment Prompt
     full_prompt = f"Context:\n{context_text}\n\nQuestion: {user_input}"
 
-    # 3. Generate Response via Ollama
+    # Generate Response via Ollama
     # We use stream=False here for a simpler HTTP response, 
     try:
         response = ollama.chat(
